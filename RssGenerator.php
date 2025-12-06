@@ -37,8 +37,8 @@ class RssGenerator
      *   每个元素包含：
      *   - title: 标题（必需）
      *   - link: 链接（必需）
-     *   - description: 描述（必需）
-     *   - content: 完整HTML内容（可选，用于全文RSS）
+     *   - description: 摘要描述（可选，如果没有提供会从 content 自动截取）
+     *   - content: 完整HTML内容（可选，输出到 content:encoded 字段用于全文RSS）
      *   - author: 作者（可选）
      *   - pubDate: 发布时间，Unix时间戳（可选）
      *   - guid: 唯一标识符（可选，默认使用link）
@@ -55,7 +55,7 @@ class RssGenerator
 
         // 开始构建 XML
         $xml = '<?xml version="1.0" encoding="UTF-8"?>' . "\n";
-        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">' . "\n";
+        $xml .= '<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom" xmlns:content="http://purl.org/rss/1.0/modules/content/">' . "\n";
         $xml .= '<channel>' . "\n";
         
         // 必需的频道信息
@@ -124,8 +124,9 @@ class RssGenerator
         $xml .= '    <title>' . self::escape($item['title']) . '</title>' . "\n";
         $xml .= '    <link>' . self::escape($item['link']) . '</link>' . "\n";
         
-        // 优先使用完整内容，否则使用摘要
-        $description = !empty($item['content']) ? $item['content'] : ($item['description'] ?? '');
+        // description - 摘要（必需字段）
+        $description = $item['description'] ?? '';
+    
         if (!empty($description)) {
             // 如果包含HTML标签，使用CDATA包裹
             if (strip_tags($description) !== $description) {
@@ -133,6 +134,11 @@ class RssGenerator
             } else {
                 $xml .= '    <description>' . self::escape($description) . '</description>' . "\n";
             }
+        }
+        
+        // content:encoded - 全文内容（扩展字段）
+        if (!empty($item['content'])) {
+            $xml .= '    <content:encoded><![CDATA[' . $item['content'] . ']]></content:encoded>' . "\n";
         }
         
         // GUID（唯一标识符）
